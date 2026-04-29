@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+message ColorCommand {
+    uint32 red = 1;
+    uint32 green = 2;
+    uint32 blue = 3;
+    uint32 alpha = 4;
+}
+
+message PressedCommand {
+    bool pressed = 1;
+}
+
+message ProtoMessage {
+    uint32 version = 1;
+    uint32 sequence_number = 2;
+    oneof payload {
+        ColorCommand color = 3;
+        PressedCommand pressed = 4;
+    }
+}
