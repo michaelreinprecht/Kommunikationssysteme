@@ -211,7 +211,8 @@ void start_ieee802154_setup()
 
 #if IEEE802154_SENDER
         xTaskCreate(ieee802154_sender_task, "ieee802154_sender", 4096, NULL, 5, NULL);
-#elif IEEE802154_RECEIVER
+#endif
+#if IEEE802154_RECEIVER
         xTaskCreate(ieee802154_receiver_task, "ieee802154_receiver", 4096, NULL, 5, NULL);
 #endif
 }
