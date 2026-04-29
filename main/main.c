@@ -38,7 +38,19 @@
 #define STARTIEEE802154 1
 
 #define IEEE802154_SENDER 1
-#define IEEE802154_RECEIVER 0
+#define IEEE802154_RECEIVER 1
+
+typedef struct
+{
+        uint8_t payload[128];
+        uint8_t length;
+        int8_t rssi;
+} ieee_packet_t;
+
+// Create a queue handle
+QueueHandle_t radio_rx_queue = NULL;
+
+static TaskHandle_t receiver_task_handle = NULL;
 
 void udp_sender_task(void *pvParameters)
 {
@@ -108,51 +120,45 @@ void udp_receiver_task(void *pvParameters)
 
 void ieee802154_receiver_task(void *pvParameters)
 {
-        esp_ieee802154_set_channel(15);
-        esp_ieee802154_set_panid(42);
-        esp_ieee802154_set_short_address(0x1234);
-        // esp_ieee802154_set_promiscuous(true);
+        ieee_packet_t rx_packet;
 
-        ESP_LOGI("RX", "Starting receiver...");
+        esp_ieee802154_set_rx_when_idle(true);
+        esp_ieee802154_receive();
 
         while (1)
         {
-                esp_ieee802154_receive();
-                vTaskDelay(pdMS_TO_TICKS(100));
+                if (xQueueReceive(radio_rx_queue, &rx_packet, portMAX_DELAY) == pdPASS)
+                {
+                        ESP_LOGI("RX_TASK", "Received %d bytes, RSSI: %d dBm", rx_packet.length, rx_packet.rssi);
+                        esp_log_buffer_hex("PAYLOAD", rx_packet.payload, rx_packet.length);
+                }
         }
 }
 
+// This is the ISR callback
 void esp_ieee802154_receive_done(uint8_t *frame, esp_ieee802154_frame_info_t *frame_info)
 {
-        uint8_t length = frame[0];
+        ieee_packet_t packet;
 
-        ESP_LOGI("RECEIVER", "Received frame.");
+        packet.length = frame[0];
+        packet.rssi = frame_info->rssi;
 
-        // Logging/Printing (Note: printf is slow for ISR context, but okay for testing)
-        printf("Packet Received! Length: %d, RSSI: %d dBm\n", length, frame_info->rssi);
-        esp_ieee802154_receive();
+        uint8_t copy_len = (packet.length > 127) ? 127 : packet.length;
+        memcpy(packet.payload, &frame[1], copy_len);
 
-        if (length > 9)
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        xQueueSendFromISR(radio_rx_queue, &packet, &xHigherPriorityTaskWoken);
+
+        if (xHigherPriorityTaskWoken)
         {
-                printf("Payload: ");
-                for (int i = 10; i <= length - 2; i++)
-                {
-                        printf("%c", frame[i]);
-                }
-                printf("\n");
+                portYIELD_FROM_ISR();
         }
-        // esp_ieee802154_receive();
+
+        esp_ieee802154_receive_handle_done(frame);
 }
 
 void ieee802154_sender_task(void *pvParameters)
 {
-        esp_ieee802154_set_channel(15);
-        esp_ieee802154_set_panid(42);
-        uint16_t short_address = 42;
-        esp_ieee802154_set_short_address(short_address);
-        esp_ieee802154_set_txpower(10);
-        // esp_ieee802154_set_promiscuous(true);
-
         uint8_t frame[128];
         static uint8_t seq_num = 0;
 
@@ -208,9 +214,17 @@ void start_ieee802154_setup()
 {
         ESP_ERROR_CHECK(nvs_flash_init());
         esp_ieee802154_enable();
+        esp_ieee802154_set_channel(15);
+        esp_ieee802154_set_panid(42);
+        uint16_t short_address = 42;
+        esp_ieee802154_set_short_address(short_address);
+        esp_ieee802154_set_txpower(10);
+        esp_ieee802154_set_promiscuous(false);
+
+        radio_rx_queue = xQueueCreate(10, sizeof(ieee_packet_t));
 
 #if IEEE802154_SENDER
-        xTaskCreate(ieee802154_sender_task, "ieee802154_sender", 4096, NULL, 5, NULL);
+        // xTaskCreate(ieee802154_sender_task, "ieee802154_sender", 4096, NULL, 5, NULL);
 #endif
 #if IEEE802154_RECEIVER
         xTaskCreate(ieee802154_receiver_task, "ieee802154_receiver", 4096, NULL, 5, NULL);
@@ -224,4 +238,9 @@ void app_main(void)
 #elif STARTIEEE802154
         start_ieee802154_setup();
 #endif
+
+        while (1)
+        {
+                vTaskDelay(pdMS_TO_TICKS(1000));
+        }
 }
