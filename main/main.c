@@ -13,7 +13,7 @@
 // IEEE802154 Setup:
 #define STARTIEEE802154 0
 
-// ZigBee-Router Setup:
+// ZigBee-Router Setup
 #define STARTZIGBEE 1
 
 void app_main(void)
