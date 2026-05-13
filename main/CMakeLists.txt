@@ -4,9 +4,13 @@ idf_component_register(SRCS "main.c"
                             "app_protocol.c"
                             "message.pb.c"
                             "led.c"
-                            "pingpong/pingpong.c"     # 1. Add the path to the source file
+                            "pingpong/pingpong.c"     
+                            "pretty_good_protocol/pretty_good_protocol.c"     
+                            "zigbee_router/zigbee_router.c"     
                        INCLUDE_DIRS "." 
-                                    "pingpong"        # 2. Add the directory for the header
+                                    "pingpong"        
+                                    "pretty_good_protocol"       
+                                    "zigbee_router"       
                        REQUIRES 
                             ieee802154
                             lwip
