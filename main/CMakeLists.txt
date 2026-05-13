@@ -4,18 +4,19 @@ idf_component_register(SRCS "main.c"
                             "app_protocol.c"
                             "message.pb.c"
                             "led.c"
-                       INCLUDE_DIRS "."
+                            "pingpong/pingpong.c"     # 1. Add the path to the source file
+                       INCLUDE_DIRS "." 
+                                    "pingpong"        # 2. Add the directory for the header
                        REQUIRES 
                             ieee802154
-                            lwip            # For sys/socket.h, lwip/err.h
-                            log             # For esp_log.h
-                            driver          # For driver/ledc.h, driver/gpio.h
-                            nvs_flash       # For nvs_flash.h
-                            esp_wifi        # For wifi_handler logic
-                            esp_event       # For event loops
-                            esp_netif       # For TCP/IP interface
-                            nikas-belogolov__nanopb # NanoPB for protobuf
-                            json           # For JSON encoding/decoding
+                            lwip
+                            log
                             driver
+                            nvs_flash
+                            esp_wifi
+                            esp_event
+                            esp_netif
+                            nikas-belogolov__nanopb
+                            json
                             led_strip
 )
