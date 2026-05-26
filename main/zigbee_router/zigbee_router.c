@@ -96,8 +96,8 @@ void router_task(void *pvParameters)
                 continue;
             }
 
-            // Check if package has received dest
-            if (mesh->dest_addr == DEVICE_SHORT_ADDR)
+            // Check if package has received dest AND if (radius < MAX_RADIUS-1) to ensure we're actually using at least one router.
+            if ((mesh->dest_addr == DEVICE_SHORT_ADDR) && (mesh->radius < MAX_RADIUS - 1))
             {
                 ESP_LOGW(TAG, "SUCCESS! Packet reached destination.");
                 ESP_LOGI(TAG, "From: 0x%04X | Msg: %s | RSSI: %d",
